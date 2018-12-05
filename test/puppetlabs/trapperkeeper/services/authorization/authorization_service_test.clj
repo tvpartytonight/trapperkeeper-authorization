@@ -110,7 +110,15 @@
      :type   "path"}
     :allow-unauthenticated true
     :sort-order 500
-    :name "puppetlabs csr"}])
+    :name "puppetlabs csr"}
+   {:match-request
+    {:path "/puppet/v3/rbac_test"
+     :method "get"
+     :type "path"}
+    :allow
+      { :rbac "get:test:*" }
+    :sort-order 500
+    :name "rbac-test"}])
 
 (def catalog-request-nocert
   "A basic request for a catalog without a valid SSL cert"
