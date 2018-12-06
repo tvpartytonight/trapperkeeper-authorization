@@ -117,8 +117,7 @@
     {:path "/puppet/v3/rbac_test"
      :method "get"
      :type "path"}
-    :allow
-      { :rbac "get:test:*" }
+    :allow {:rbac {:permission "get:test:*"}}
     :sort-order 500
     :name "rbac-test"}])
 
