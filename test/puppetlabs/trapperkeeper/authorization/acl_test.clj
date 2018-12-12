@@ -123,6 +123,11 @@
     (testing "should allow anything"
       (is (acl/allowed? acl {:certname "anything" :extensions {}})))))
 
+(deftest test-rbac-permission
+  (let [acl (acl/allow {:rbac {:permission "whee"}} )]
+    (testing "RBAC permission string matching"
+      (is (acl/allowed? acl {:permission "whee"})))))
+
 (deftest test-acl-certname-matching-with-captures
   (testing "matching backreference of simple name"
     (let [acl (acl/allow {:certname "$1.google.com"})]

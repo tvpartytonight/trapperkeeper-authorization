@@ -54,8 +54,9 @@
 (def ACEChallenge
   "Pertinent authorization information extracted from a request used during
   authz rule enforcement."
-  {:certname schema/Str
-   :extensions Extensions})
+  {(schema/optional-key :certname) schema/Str
+   (schema/optional-key :permission) schema/Str
+   (schema/optional-key :extensions) Extensions})
 
 (def ACEConfig
   "Schema for representing the configuration of an ACE."
@@ -275,9 +276,12 @@
     incoming-ace :- ACEChallenge]
    (match? acl-ace incoming-ace {}))
   ([{:keys [match] :as acl-ace} :- ACE
-    {:keys [certname extensions]} :- ACEChallenge
+    {:keys [certname extensions permission]} :- ACEChallenge
     oid-map :- OIDMap]
    (cond
+     (some? permission)
+     (= permission (get-in acl-ace[:value]))
+
      (= :extensions match)
      (if (nil? extensions)
        false
