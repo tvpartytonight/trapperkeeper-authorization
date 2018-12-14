@@ -239,9 +239,9 @@
    request]
   (if token->subject
     (if-let [token (get-in request [:headers "x-authentication"])]
-     (assoc request :rbac-subject (token->subject token))
-     request))
-  request)
+      (assoc request :rbac-subject (token->subject token))
+      request)
+    request))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Public
@@ -250,6 +250,10 @@
   "Checks that the request is allowed by the provided rules and returns an
    authorization result map containing the request with authorization info
    added, whether the request is authorized, and a message."
+  ([request :- ring/Request
+    rules :- [rules/Rule]
+    allow-header-cert-info :- schema/Bool]
+   (authorization-check request rules {} allow-header-cert-info nil nil))
   ([request :- ring/Request
     rules :- [rules/Rule]
     allow-header-cert-info :- schema/Bool
@@ -272,17 +276,23 @@
    and if not returns a 403 response with a user-friendly message."
   ([handler :- IFn
     rules :- [rules/Rule]
+    allow-header-cert-info :- schema/Bool]
+   (wrap-authorization-check handler rules {} allow-header-cert-info nil nil))
+  ([handler :- IFn
+    rules :- [rules/Rule]
     allow-header-cert-info :- schema/Bool
-    rbac-is-permitted? :- (schema/maybe IFn)]
-   (wrap-authorization-check handler rules {} allow-header-cert-info rbac-is-permitted?))
+    rbac-is-permitted? :- (schema/maybe IFn)
+    token->subject :- (schema/maybe IFn)]
+   (wrap-authorization-check handler rules {} allow-header-cert-info rbac-is-permitted? token->subject))
   ([handler :- IFn
     rules :- [rules/Rule]
     oid-map :- acl/OIDMap
     allow-header-cert-info :- schema/Bool
-    rbac-is-permitted? :- (schema/maybe IFn)]
+    rbac-is-permitted? :- (schema/maybe IFn)
+    token->subject :- (schema/maybe IFn)]
    (fn [req]
      (let [{:keys [authorized message request]}
-           (authorization-check req rules oid-map allow-header-cert-info rbac-is-permitted?)]
+           (authorization-check req rules oid-map allow-header-cert-info rbac-is-permitted? token->subject)]
        (if (true? authorized)
          (handler request)
          (-> (ring-response/response message)

@@ -218,9 +218,9 @@
         (is (!allowed? (challenge "neo.formalism.com" {:style "haiku" :author "plath"})))))))
 
 (deftest test-rbac-allowed
-  (let [is-permitted? (fn [subject permission] (and (= permission "letmein") (= subject "good")))
-        acl #{(acl/new-domain :allow {:rbac {:permission "123456"}})
-              (acl/new-domain :allow {:rbac {:permission "letmein"}})}]
+  (let [is-permitted? (fn [subject permission] (and (= permission "let:me:in") (= subject "good")))
+        acl #{(acl/new-domain :allow {:rbac {:permission "12:34:56"}})
+              (acl/new-domain :allow {:rbac {:permission "let:me:in"}})}]
     (testing "allows"
       (is (acl/rbac-allowed? acl "good" is-permitted?)))
     (testing "denies"

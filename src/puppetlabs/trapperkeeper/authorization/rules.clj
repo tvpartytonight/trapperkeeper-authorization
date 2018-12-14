@@ -209,13 +209,12 @@
   "Checks if a request is allowed access given the list of rules. Rules
    will be checked in the given order; use `sort-rules` to first sort them."
   ([rules :- [Rule]
-    request :- ring/Request
-    rbac-is-permitted? :- (schema/maybe IFn)]
-   (allowed? rules {} request))
+    request :- ring/Request]
+   (allowed? rules {} nil request))
   ([rules :- [Rule]
     oid-map :- acl/OIDMap
-    request :- ring/Request
-    rbac-is-permitted? :- (schema/maybe IFn)]
+    rbac-is-permitted? :- (schema/maybe IFn)
+    request :- ring/Request]
    (if-let [{:keys [rule matches]} (some #(match? % request) rules)]
      (if (true? (:allow-unauthenticated rule))
        (allow-request request rule "allow-unauthenticated is true - allowed")
@@ -225,7 +224,7 @@
                                    :extensions (ring/authorized-extensions request)}
                                   {:oid-map oid-map
                                    :captures matches}))
-               (acl/rbac-allowed? (:acl rule) (:subject request) rbac-is-permitted?))
+               (acl/rbac-allowed? (:acl rule) (:rbac-subject request) rbac-is-permitted?))
          (allow-request request rule "")
          (deny-request request rule (request->log-description request rule)
                        (request->resp-description request rule))))

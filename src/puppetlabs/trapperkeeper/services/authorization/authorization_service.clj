@@ -32,10 +32,13 @@
    (let [config (get-in-config [:authorization])
          rules (-> config validate-auth-config! :rules transform-config)
          is-permitted? (if-let [rbac-service (maybe-get-service this :RbacConsumerService)]
-                         (partial rbac/is-permitted? rbac-service))]
+                         (partial rbac/is-permitted? rbac-service))
+         token->subject (if-let [rbac-service (maybe-get-service this :RbacConsumerService)]
+                          (partial rbac/valid-token->subject rbac-service))]
      (log/debug (trs "Transformed auth.conf rules:\n{0}") (ks/pprint-to-string rules))
      (-> context
          (assoc :is-permitted? is-permitted?)
+         (assoc :token->subject token->subject)
          (assoc-in [:rules] rules)
          (assoc-in [:allow-header-cert-info] (get config
                                                   :allow-header-cert-info
@@ -45,8 +48,8 @@
    (authorization-check this request {:oid-map {}}))
 
   (authorization-check [this request {:keys [oid-map]}]
-   (let [{:keys [rules allow-header-cert-info is-permitted?]} (service-context this)]
-    (ring-middleware/authorization-check request rules oid-map allow-header-cert-info is-permitted?)))
+   (let [{:keys [rules allow-header-cert-info is-permitted? token->subject]} (service-context this)]
+    (ring-middleware/authorization-check request rules oid-map allow-header-cert-info is-permitted? token->subject)))
 
   (wrap-with-authorization-check
    [this handler]
@@ -54,7 +57,7 @@
 
   (wrap-with-authorization-check
    [this handler {:keys [oid-map]}]
-   (let [{:keys [allow-header-cert-info rules is-permitted?]} (service-context this)]
+   (let [{:keys [allow-header-cert-info rules is-permitted? token->subject]} (service-context this)]
      (-> handler
-         (ring-middleware/wrap-authorization-check rules oid-map allow-header-cert-info is-permitted?)
+         (ring-middleware/wrap-authorization-check rules oid-map allow-header-cert-info is-permitted? token->subject)
          (mw/wrap-bad-request :plain)))))
