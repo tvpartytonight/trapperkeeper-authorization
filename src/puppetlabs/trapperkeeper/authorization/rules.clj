@@ -1,11 +1,11 @@
 (ns puppetlabs.trapperkeeper.authorization.rules
   (:require [clojure.tools.logging :as log]
-            [puppetlabs.ssl-utils.core :refer [get-extensions]]
+            [puppetlabs.i18n.core :refer [trs tru]]
             [puppetlabs.trapperkeeper.authorization.acl :as acl]
             [puppetlabs.trapperkeeper.authorization.ring :as ring]
-            [schema.core :as schema]
-            [puppetlabs.i18n.core :refer [trs tru]])
-  (:import java.util.regex.Pattern))
+            [schema.core :as schema])
+  (:import clojure.lang.IFn
+           java.util.regex.Pattern))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Schemas
@@ -209,20 +209,23 @@
   "Checks if a request is allowed access given the list of rules. Rules
    will be checked in the given order; use `sort-rules` to first sort them."
   ([rules :- [Rule]
-    request :- ring/Request]
+    request :- ring/Request
+    rbac-is-permitted? :- (schema/maybe IFn)]
    (allowed? rules {} request))
   ([rules :- [Rule]
     oid-map :- acl/OIDMap
-    request :- ring/Request]
+    request :- ring/Request
+    rbac-is-permitted? :- (schema/maybe IFn)]
    (if-let [{:keys [rule matches]} (some #(match? % request) rules)]
      (if (true? (:allow-unauthenticated rule))
        (allow-request request rule "allow-unauthenticated is true - allowed")
-       (if (and (true? (ring/authorized-authenticated request))
-                (acl/allowed? (:acl rule)
-                              {:certname (ring/authorized-name request)
-                               :extensions (ring/authorized-extensions request)}
-                              {:oid-map oid-map
-                               :captures matches}))
+       (if (or (and (true? (ring/authorized-authenticated request))
+                    (acl/allowed? (:acl rule)
+                                  {:certname (ring/authorized-name request)
+                                   :extensions (ring/authorized-extensions request)}
+                                  {:oid-map oid-map
+                                   :captures matches}))
+               (acl/rbac-allowed? (:acl rule) (:subject request) rbac-is-permitted?))
          (allow-request request rule "")
          (deny-request request rule (request->log-description request rule)
                        (request->resp-description request rule))))
